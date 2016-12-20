@@ -43,9 +43,14 @@ void convert_add(char *yuv_pic,unsigned char y,unsigned char y_,unsigned char u,
     r_ = 1.164383 * (y_ - 16) + 1.596027*(v_ - 128);
     b_ = 1.164383 * (y_ - 16) + 2.017232*(u_ - 128);
     g_ = 1.164383 * (y_ - 16) - 0.391762*(u_ - 128) - 0.812968*(v_ - 128);
+    
     r = r>255? 255 : r<0 ? 0 : r;
     g = g>255? 255 : g<0 ? 0 : g;
     b = b>255? 255 : b<0 ? 0 : b;
+    r_ = r_>255? 255 : r_<0 ? 0 : r_;
+    g_ = g_>255? 255 : g_<0 ? 0 : g_;
+    b_ = b_>255? 255 : b_<0 ? 0 : b_;
+    
     r=(alpha*r+(256-alpha)*r_)/256;
     g=(alpha*g+(256-alpha)*g_)/256;
     b=(alpha*b+(256-alpha)*b_)/256;
