@@ -2,7 +2,7 @@
 #include <iostream>
 #include "YUV2ARGB2YUV.h"
 #include <cstdlib>
-#include <cmath>
+// #include <cmath>
 #include <cstdio>
 #include <stdio.h>
 #include <time.h>
@@ -34,20 +34,23 @@ int process_without_simd(){
         fin.read(yuv_1, char_num);
         fin.close();
         ofstream fout;
+        fout.open("0-84.yuv", ios::binary);
+        
         for(int A=1;A<256;A=A+3) {
             //printf("%d\n",A);
             start_tmp = clock();
             YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
-            end =clock();
+            end = clock();
             time = (int)((end - start_tmp)/1000);
             printf("time for loop %d is %d\n",(A-1)/3+1,time);
-            char name[10];
-            sprintf(name,"%d.yuv",(A-1)/3);
+            //char name[10];
+            //sprintf(name,"%d.yuv",(A-1)/3);
             //printf("%s",name);
-            fout.open(name,ios::binary);
+            //fout.open(name,ios::binary);
             fout.write(yuv_2,char_num);
-            fout.close();
+            //fout.close();
         }
+        fout.close();
     }
     else{
         char* yuv_0 = new char[(1080*1920*3)>>1];//source image 1
@@ -62,20 +65,23 @@ int process_without_simd(){
         fin1.read(yuv_1, char_num);
         fin1.close();
         ofstream fout;
+		fout.open("add0-84.yuv", ios::binary);
+		
         for(int A=1;A<256;A=A+3) {
             //printf("%d\n",A);
             start_tmp = clock();
             YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
-            end =clock();
+            end = clock();
             time = (int)((end - start_tmp)/1000);
             printf("time for loop %d is %d\n",(A-1)/3+1,time);
-            char name[10];
-            sprintf(name,"add%d.yuv",(A-1)/3);
+            //char name[10];
+            //sprintf(name,"add%d.yuv",(A-1)/3);
             //printf("%s",name);
-            fout.open(name,ios::binary);
+            //fout.open(name,ios::binary);
             fout.write(yuv_2,char_num);
-            fout.close();
+            //fout.close();
         }
+        fout.close();
     }
     end =clock();
     time = (int)((end - start)/1000);//count by second / ms
