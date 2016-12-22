@@ -60,15 +60,13 @@ void convert2rgb(__m256 &r,__m256 &g,__m256 &b,__m256 y,__m256 u,__m256 v)
 char* YUV2ARGB(char* yuv_file,int width,int height,int alpha)
 {
 	char* rgb_file = new char[width*height*4];
-	__m256  y;  
-        	__m256  u;  
-        	__m256  v;  
+	__m256  y,u,v;
         	int tmp = 0;
-	for(int i = 0 ;i<pic_height;i+=2)
-	for(int j = 0;j<pic_width;j+=4)
+        	char* ystart;
+	for(int i = 0 ;i<height;i+=2)
+	for(int j = 0;j<width;j+=4)
 	{
-		char* ystart=yuv_file+i*pic_width+j;
-		char* ustart=yuv_file+pic_height*pic_width+(i/2);
+		ystart=yuv_file+i*width+j;
 		//Y1 Y2 Y7 Y8 Y3 Y4 Y9 Y10
 		y = _mm256_set_ps ((float)ystart[0],(float)*(ystart+1),(float)*(ystart+width), (float)*(ystart+1+width), (float)*(ystart+2), (float)*(ystart+2+width), (float)*(ystart+3), (float)*(ystart+3+width));
 		float u1=(float)*(yuv_file+width*height+tmp);
@@ -77,9 +75,7 @@ char* YUV2ARGB(char* yuv_file,int width,int height,int alpha)
 		float v2=(float)*(yuv_file+width*height+(width*height/4)+tmp+1);
 		u = _mm256_set_ps (u1,u1,u1,u1,u2,u2,u2,u2);
 		v = _mm256_set_ps (v1,v1,v1,v1,v2,v2,v2,v2);
-		__m256  r;  
-		__m256  g;  
-        		__m256  b;  
+		__m256  r,g,b;
         		convert2rgb(r,g,b,y,u,v);
 
         		rgb_file[tmp*4] =rgb_file[(tmp+1)*4] =rgb_file[(tmp+width)*4] =rgb_file[(tmp+width+1)*4] =rgb_file[(tmp+2)*4] =rgb_file[(tmp+2+width)*4] =rgb_file[(tmp+3)*4] =rgb_file[(tmp+3+width)*4] = (unsigned char)alpha;
@@ -122,26 +118,61 @@ void convert2yuv(__m256 r,__m256 g,__m256 b,__m256 &y,__m256 &u,__m256 &v)
 	tmp = _mm256_set1_ps(0.097906);
 	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,b));
 	y = _mm256_add_ps(y,_mm256_set1_ps(16));
+
+	u=_mm256_setzero_ps();
+	tmp=_mm256_set1_ps(0.439216);
+	u=_mm256_add_ps(u,_mm256_mul_ps(tmp,b));
+	u=_mm256_add_ps(u,_mm256_set1_ps(128));
+	u=_mm256_sub_ps(u,_mm256_mul_ps(g,_mm256_set1_ps(0.290993)));
+	u=_mm256_sub_ps(u,_mm256_mul_ps(r,_mm256_set1_ps(0.148223)));
+	v=_mm256_mul_ps(r, _mm256_set1_ps(0.439216));
+	v=_mm256_sub_ps(v,_mm256_mul_ps(g,_mm256_set1_ps(0.367788)));
+	v=_mm256_sub_ps(v,_mm256_mul_ps(b,_mm256_set1_ps(0.071427)));
+	v=_mm256_add_ps(v,_mm256_set1_ps(128));
 }
-char* ARGB2YUV(char* argb_file,int width,int height)
+char* ARGB2YUV(char* rgb_file,int width,int height)
 {
 	char* yuv_file = new char[width*height*3];
-        	__m256  r;  
-        	__m256  g;  
-        	__m256  b;  
+        	__m256  r,g,b;
         	int tmp = 0;
+        	char* ystart;
+        	char* ustart = yuv_file+pic_height*pic_width;
 	for(int i = 0 ;i<pic_height;i+=2)
 	for(int j = 0;j<pic_width;j+=4)
 	{
-		char* ystart=yuv_file+i*pic_width+j;
-		char* ustart=yuv_file+pic_height*pic_width+(i/2);
+		ystart = yuv_file+i*width;
 		r = _mm256_set_ps((float)rgb_file[tmp*4+1],(float)rgb_file[(tmp+1)*4+1],(float)rgb_file[(tmp+width)*4+1],(float)rgb_file[(tmp+width+1)*4+1],(float)rgb_file[(tmp+2)*4+1],(float)rgb_file[(tmp+2+width)*4+1],(float)rgb_file[(tmp+3)*4+1],(float)rgb_file[(tmp+3+width)*4+1]);
 		g = _mm256_set_ps((float)rgb_file[tmp*4+2],(float)rgb_file[(tmp+1)*4+2],(float)rgb_file[(tmp+width)*4+2],(float)rgb_file[(tmp+width+1)*4+2],(float)rgb_file[(tmp+2)*4+2],(float)rgb_file[(tmp+2+width)*4+2],(float)rgb_file[(tmp+3)*4+2],(float)rgb_file[(tmp+3+width)*4+2]);
 		b = _mm256_set_ps((float)rgb_file[tmp*4+3],(float)rgb_file[(tmp+1)*4+3],(float)rgb_file[(tmp+width)*4+3],(float)rgb_file[(tmp+width+1)*4+3],(float)rgb_file[(tmp+2)*4+3],(float)rgb_file[(tmp+2+width)*4+3],(float)rgb_file[(tmp+3)*4+3],(float)rgb_file[(tmp+3+width)*4+3]);
-		__m256  v;  
-		__m256  u;  
-        		__m256  y;  
+        		__m256  y,u,v;  
         		convert2yuv(r,g,b,y,u,v);
+        		//store the res
+        		float result[8];
+		 _mm256_storeu_ps (result,y);
+		 ystart[0]=(char)result[0];
+		 ystart[1]=(char)result[1];
+		 ystart[width]=(char)result[2];
+		 ystart[1+width]=(char)result[3];
+		 ystart[2]=(char)result[4];
+		 ystart[3]=(char)result[5];
+		 ystart[2+width]=(char)result[6];
+		 ystart[3+width]=(char)result[7];
+
+		 _mm256_storeu_ps (result,u);
+		 cout<<"all u result"<<endl;
+		 for(int k=0;k<8;k++)
+		 	cout<<(char)result[k]<<endl;
+		 ustart[0]=(char)result[0];
+		 ustart[1]=(char)result[4];
+
+		 char* vstart = ustart+(width*height)/4;
+		 _mm256_storeu_ps (result,v);
+		 cout<<"all v result"<<endl;
+		 for(int k=0;k<8;k++)
+		 	cout<<(char)result[k]<<endl;
+		 vstart[0]=(char)result[0];
+		 vstart[1]=(char)result[4];
 		tmp+=2;
+		ustart+=2;
 	}
 }
