@@ -4,9 +4,9 @@ all: q1
 	rm -rf *.o *~
 
 q1:
-	$(CC) -msse2 -o $@ main.cpp YUV2ARGB2YUV.h
+	$(CC) -o $@ main.cpp YUV2ARGB2YUV.h YUV2ARGB2YUV-sse2.h
 
 .PHONY: clean
 
 clean:
-	rm -rf q1 *.o *~
+	rm -rf q1* *.o *~

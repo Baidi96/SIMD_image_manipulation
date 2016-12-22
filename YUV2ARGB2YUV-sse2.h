@@ -1,48 +1,66 @@
+#include <emmintrin.h>
+#include <stdio.h>
 
-struct NO_SIMD
+#define ARG_TYPE_SSE2 int
+
+struct SSE2
 {
-	static void yuv2rgb(int y, int u, int v, int &r, int &g, int &b)
+	static void yuv2rgb(ARG_TYPE_SSE2 y, ARG_TYPE_SSE2 u, ARG_TYPE_SSE2 v, ARG_TYPE_SSE2 &r, ARG_TYPE_SSE2 &g, ARG_TYPE_SSE2 &b)
 	{
-		// r = y+1.140*v;
-		// g = y-0.394*u-0.581*v;
-		// b = y+2.032*u;
-
-		// r = 1.164383 * (y - 16) + 1.596027*(v - 128);
-		// b = 1.164383 * (y - 16) + 2.017232*(u - 128);
-		// g = 1.164383 * (y - 16) - 0.391762*(u - 128) - 0.812968*(v - 128);
-
-		r = (76309 * (y - 16) + 104597 * (v - 128)) / 65536;
-		b = (76309 * (y - 16) + 133201 * (u - 128)) / 65536;
-		g = (76309 * (y - 16) - 25675 * (u - 128) - 53279 * (v - 128)) / 65336;
+	
+		r = (298 * (y - 16) + 409 * (v - 128)) / 256;
+		b = (298 * (y - 16) + 520 * (u - 128)) / 256;
+		g = (298 * (y - 16) - 100 * (u - 128) - 208 * (v - 128)) / 256;
+		/*
+		__m128i t0i = _mm_set_epi16(-16, -128, -16, -128, -16, -128, -128, 0);
+		__m128i t1i = _mm_set_epi16(298, 409, 298, 520, 298, 100, 208, 0);
+		
+		__m128i t0v = _mm_set_epi16(y, v, y, u, y, u, v, 0);
+		
+		__m128i h0 = _mm_adds_epi16(t0i, t0v);
+		__m128i h1 = _mm_mulhi_epu16(h0, t1i);
+		short dst[8];
+		_mm_store_si128((__m128i*)dst, h1);
+		r = dst[0] + dst[1];
+		b = dst[2] + dst[3];
+		g = dst[4] - dst[5] - dst[6];
+		*/
 		r = r>255 ? 255 : r<0 ? 0 : r;
 		g = g>255 ? 255 : g<0 ? 0 : g;
 		b = b>255 ? 255 : b<0 ? 0 : b;
+		// printf("r = %d, g = %d, b = %d\n", r, g, b);
 	}
 
-	static void rgb2yuv(int r, int g, int b, int &y, int &u, int &v)
+	static void rgb2yuv(ARG_TYPE_SSE2 r, ARG_TYPE_SSE2 g, ARG_TYPE_SSE2 b, ARG_TYPE_SSE2 &y, ARG_TYPE_SSE2 &u, ARG_TYPE_SSE2 &v)
 	{
-		//char y2 = 0.299*r+0.587*g+0.114*b;
-		//char u2 = 0.492*(b-y2);
-		//char v2 = 0.877*(r-y2);
+		y = (66 * r + 129 * g + 25 * b) / 256 + 16;
+		u = (-38 * r - 74 * g + 112 * b) / 256 + 128;
+		v = (112 * r - 94 * g - 18 * b) / 256 + 128;
+		/*
+		__m128i t0i = _mm_set_epi16(66, 129, 25, 38, 74, 112, 112, 94);
+		__m128i t0v = _mm_set_epi16(r, g, b, r, g, b, r, g);
+
+		__m128i h1 = _mm_mulhi_epu16(t0i, t0v);
+		short dst[9];
+		_mm_store_si128((__m128i*)dst, h1);
+		dst[8] = 18 * b / 256;
 		
-		//unsigned char y2 = 0.256788*r + 0.504129*g + 0.097906*b + 16;
-		//unsigned char u2 = -0.148223*r - 0.290993*g + 0.439216*b + 128;
-		//unsigned char v2 = 0.439216*r - 0.367788*g - 0.071427*b + 128;
-		
-		y = (16829 * r + 33039 * g + 6416 * b) / 65536 + 16;
-		u = (-9714 * r - 19071 * g + 28784 * b) / 65536 + 128;
-		v = (28784 * r - 24103 * g - 4681 * b) / 65536 + 128;
+		y = dst[0] + dst[1] + dst[2] + 16;
+		u = -dst[3] - dst[4] + dst[5] + 128;
+		v = dst[6] - dst[7] - dst[8] + 128;
+		*/
+		// printf("y = %d, u = %d, v = %d\n", y, u, v);
 	}
 
-	static void convert(char *yuv_pic,unsigned char y,unsigned char u,unsigned char v, int width, int height,int offset,int i, int k, int alpha, int cnt) {
-		int r, g, b;
+	static void convert(char *yuv_pic, int y, int u, int v, int width, int height,int offset,int i, int k, int alpha, int cnt) {
+		ARG_TYPE_SSE2 r, g, b;
 		yuv2rgb(y, u, v, r, g, b);
 		
 		r=(alpha*r)/256;
 		g=(alpha*g)/256;
 		b=(alpha*b)/256;
 
-		int y2, u2, v2;
+		ARG_TYPE_SSE2 y2, u2, v2;
 		rgb2yuv(r, g, b, y2, u2, v2);
 		
 		yuv_pic[i] = y2;
@@ -52,7 +70,7 @@ struct NO_SIMD
 		    yuv_pic[offset + k + width*height/4] = v2;
 		}
 	}
-
+	/*
 	static void convert_add(char *yuv_pic,unsigned char y,unsigned char y_,unsigned char u,unsigned char u_,unsigned char v,unsigned char v_, int width, int height,int offset,int i, int k, int alpha, int cnt) {
 		int r,g,b,r_,g_,b_;
 		yuv2rgb(y, u, v, r, g, b);
@@ -71,12 +89,12 @@ struct NO_SIMD
 		    yuv_pic[offset + k] = u2;
 		    yuv_pic[offset + k + width*height/4] = v2;
 		}
-	}
+	}*/
 
 	static void YUV2ARGB2YUV(char* data, char *yuv_pic, int width, int height,int alpha) {
 		int size = width*height;  
 		int offset = size;
-		unsigned char u, v, y1, y2, y3, y4;
+		short u, v, y1, y2, y3, y4;
 		for(int i=0, k=0; i < size; i+=2, k+=1) {
 		    //printf("%d\n",i);
 		    y1 = data[i];
@@ -97,7 +115,7 @@ struct NO_SIMD
 		}
 	}  
 
-
+	/*
 	static void YUV2ARGB2YUV_add(char* data, char* data2,char *yuv_pic, int width, int height,int alpha) {
 		int size = width*height;
 		int offset = size;
@@ -129,5 +147,6 @@ struct NO_SIMD
 		        i+=width;
 		}
 	}
+	*/
 };
 
