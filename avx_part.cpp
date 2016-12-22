@@ -112,7 +112,36 @@ char* YUV2ARGB(char* yuv_file,int width,int height,int alpha)
 	}
 	return rgb_file;
 }
+void convert2yuv(__m256 r,__m256 g,__m256 b,__m256 &y,__m256 &u,__m256 &v)
+{
+	y = _mm256_setzero_ps();
+	__m256 tmp = _mm256_set1_ps(0.256788);
+	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,r));
+	tmp = _mm256_set1_ps(0.504129);
+	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,g));
+	tmp = _mm256_set1_ps(0.097906);
+	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,b));
+	y = _mm256_add_ps(y,_mm256_set1_ps(16));
+}
 char* ARGB2YUV(char* argb_file,int width,int height)
 {
-
+	char* yuv_file = new char[width*height*3];
+        	__m256  r;  
+        	__m256  g;  
+        	__m256  b;  
+        	int tmp = 0;
+	for(int i = 0 ;i<pic_height;i+=2)
+	for(int j = 0;j<pic_width;j+=4)
+	{
+		char* ystart=yuv_file+i*pic_width+j;
+		char* ustart=yuv_file+pic_height*pic_width+(i/2);
+		r = _mm256_set_ps((float)rgb_file[tmp*4+1],(float)rgb_file[(tmp+1)*4+1],(float)rgb_file[(tmp+width)*4+1],(float)rgb_file[(tmp+width+1)*4+1],(float)rgb_file[(tmp+2)*4+1],(float)rgb_file[(tmp+2+width)*4+1],(float)rgb_file[(tmp+3)*4+1],(float)rgb_file[(tmp+3+width)*4+1]);
+		g = _mm256_set_ps((float)rgb_file[tmp*4+2],(float)rgb_file[(tmp+1)*4+2],(float)rgb_file[(tmp+width)*4+2],(float)rgb_file[(tmp+width+1)*4+2],(float)rgb_file[(tmp+2)*4+2],(float)rgb_file[(tmp+2+width)*4+2],(float)rgb_file[(tmp+3)*4+2],(float)rgb_file[(tmp+3+width)*4+2]);
+		b = _mm256_set_ps((float)rgb_file[tmp*4+3],(float)rgb_file[(tmp+1)*4+3],(float)rgb_file[(tmp+width)*4+3],(float)rgb_file[(tmp+width+1)*4+3],(float)rgb_file[(tmp+2)*4+3],(float)rgb_file[(tmp+2+width)*4+3],(float)rgb_file[(tmp+3)*4+3],(float)rgb_file[(tmp+3+width)*4+3]);
+		__m256  v;  
+		__m256  u;  
+        		__m256  y;  
+        		convert2yuv(r,g,b,y,u,v);
+		tmp+=2;
+	}
 }
