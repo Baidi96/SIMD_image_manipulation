@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
 	fin.read((char*)yuv_file, char_num);
 	fin.close();
 	unsigned char* rgb_file=YUV2ARGB((unsigned char*)yuv_file,pic_width,pic_height,0);
+	delete [] yuv_file; 
 	yuv_file=ARGB2YUV((unsigned char*)rgb_file,pic_width,pic_height);
 	ofstream fout;
 	fout.open("trs1.yuv");
@@ -39,7 +40,7 @@ void convert2rgb(__m256 &r,__m256 &g,__m256 &b,__m256 y,__m256 u,__m256 v)
 	vec_tmp = _mm256_set1_ps(2.017232);
 	b = _mm256_add_ps(_mm256_mul_ps(y,vec_1_164),_mm256_mul_ps(u,vec_tmp));
 	vec_tmp = _mm256_set1_ps(0.391762);
-	g = _mm256_sub_ps(_mm256_mul_ps(vec_1_164,y),_mm256_mul_ps(u,vec_tmp));
+	g = _mm256_sub_ps(_mm256_mul_ps(y,vec_1_164),_mm256_mul_ps(u,vec_tmp));
 	vec_tmp = _mm256_set1_ps(0.812968);
 	g = _mm256_sub_ps(g, _mm256_mul_ps(v,vec_tmp));
 	//round to nearest
@@ -59,11 +60,11 @@ unsigned char* YUV2ARGB(unsigned char* yuv_file,int width,int height,int alpha)
 	{
 		ystart=yuv_file+i*width+j;
 		//Y1 Y2 Y7 Y8 Y3 Y4 Y9 Y10
-		y = _mm256_set_ps ((float)ystart[0],(float)*(ystart+1),(float)*(ystart+width), (float)*(ystart+1+width), (float)*(ystart+2), (float)*(ystart+2+width), (float)*(ystart+3), (float)*(ystart+3+width));
-		float u1=(float)*(yuv_file+width*height+tmp);
-		float u2=(float)*(yuv_file+width*height+tmp +1);
-		float v1=(float)*(yuv_file+width*height+(width*height/4)+tmp);
-		float v2=(float)*(yuv_file+width*height+(width*height/4)+tmp+1);
+		y = _mm256_set_ps ((float)ystart[0],(float)(ystart[1]),(float)(ystart[width]), (float)(ystart[1+width]), (float)(ystart[2]), (float)(ystart[2+width]), (float)(ystart[3]), (float)(ystart[3+width]));
+		float u1=(float)(*(yuv_file+width*height+tmp));
+		float u2=(float)(*(yuv_file+width*height+tmp +1));
+		float v1=(float)(*(yuv_file+width*height+(width*height/4)+tmp));
+		float v2=(float)(*(yuv_file+width*height+(width*height/4)+tmp+1));
 		u = _mm256_set_ps (u1,u1,u1,u1,u2,u2,u2,u2);
 		v = _mm256_set_ps (v1,v1,v1,v1,v2,v2,v2,v2);
 		__m256  r,g,b;
@@ -120,18 +121,16 @@ unsigned char* YUV2ARGB(unsigned char* yuv_file,int width,int height,int alpha)
 }
 void convert2yuv(__m256 r,__m256 g,__m256 b,__m256 &y,__m256 &u,__m256 &v)
 {
-	y = _mm256_setzero_ps();
 	__m256 tmp = _mm256_set1_ps(0.256788);
-	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,r));
+	y = _mm256_mul_ps(tmp,r);
 	tmp = _mm256_set1_ps(0.504129);
 	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,g));
 	tmp = _mm256_set1_ps(0.097906);
 	y = _mm256_add_ps(y,_mm256_mul_ps(tmp,b));
 	y = _mm256_add_ps(y,_mm256_set1_ps(16.0));
 
-	u=_mm256_setzero_ps();
 	tmp=_mm256_set1_ps(0.439216);
-	u=_mm256_add_ps(u,_mm256_mul_ps(tmp,b));
+	u=_mm256_mul_ps(tmp,b);
 	u=_mm256_add_ps(u,_mm256_set1_ps(128.0));
 	u=_mm256_sub_ps(u,_mm256_mul_ps(g,_mm256_set1_ps(0.290993)));
 	u=_mm256_sub_ps(u,_mm256_mul_ps(r,_mm256_set1_ps(0.148223)));
