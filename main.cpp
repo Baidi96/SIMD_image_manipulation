@@ -2,6 +2,7 @@
 #include <iostream>
 #include "YUV2ARGB2YUV.h"
 #include "YUV2ARGB2YUV-sse2.h"
+#include "YUV2ARGB2YUV-avx.h"
 #include <cstdlib>
 // #include <cmath>
 #include <cstdio>
@@ -23,6 +24,8 @@ int main()
     printf("----time for total process_without_simd:%d \n", time0);
     int time2 = process(2);
     printf("----time for total process_with_sse:%d \n", time2);
+    int time3 = process(3);
+    printf("----time for total process_with_avx:%d \n", time3);
     return 0;
 }
 
@@ -58,9 +61,11 @@ int process(int isa)
             	NO_SIMD::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
             else if(isa == 2)
             	SSE2::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
+            else if(isa == 3)
+            	AVX::YUV2ARGB2YUV((unsigned char*)yuv_1,(unsigned char*)yuv_2,1920,1080,A);
             end = clock();
             time = (int)((end - start_tmp)/1000);
-            printf("time for loop %d is %d\n",(A-1)/3+1,time);
+            //printf("time for loop %d is %d\n",(A-1)/3+1,time);
             //char name[10];
             //sprintf(name,"%d.yuv",(A-1)/3);
             //printf("%s",name);
@@ -93,9 +98,11 @@ int process(int isa)
             	NO_SIMD::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
             else if(isa == 2)
             	SSE2::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
+            else if(isa == 3)
+            	AVX::YUV2ARGB2YUV_add((unsigned char*)yuv_0,(unsigned char*)yuv_1,(unsigned char*)yuv_2,1920,1080,A);
             end = clock();
             time = (int)((end - start_tmp)/1000);
-            printf("time for loop %d is %d\n",(A-1)/3+1,time);
+            //printf("time for loop %d is %d\n",(A-1)/3+1,time);
             //char name[10];
             //sprintf(name,"add%d.yuv",(A-1)/3);
             //printf("%s",name);

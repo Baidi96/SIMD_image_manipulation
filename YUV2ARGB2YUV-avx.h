@@ -1,12 +1,5 @@
 #include "immintrin.h"
-#include <iostream>
-#include <cstring>
-#include <cstdio>
-#include <fstream>
-#include <ctime>
-using namespace std;
-const int pic_width = 1920;
-const int pic_height = 1080;
+
 struct AVX
 {
 	static void convert2rgb(__m256d &r,__m256d &g,__m256d &b,__m256d y,__m256d u,__m256d v)
@@ -72,11 +65,14 @@ struct AVX
 			 yuv_pic[i+width] = (unsigned char)result[2];
 			 yuv_pic[i+width+1] = (unsigned char)result[3];
 
-			 _mm256_storeu_pd (result,u);
-			 yuv_pic[offset+k]=(unsigned char)result[0];
+			 //yuv_pic[i] = (unsigned char)(((double*)&y2)[0]);
+			 //_mm256_storeu_pd (result,u);
+			 //yuv_pic[offset+k]=(unsigned char)result[0];
+			 yuv_pic[offset+k] = (unsigned char)(((double*)&u)[0]);
 
-			 _mm256_storeu_pd (result,v);
-			 yuv_pic[offset+k+width*height/4]=(unsigned char)result[0];
+			 //_mm256_storeu_pd (result,v);
+			 //yuv_pic[offset+k+width*height/4]=(unsigned char)result[0];
+			  yuv_pic[offset+k+width*height/4] = (unsigned char)(((double*)&v)[0]);
 	}
 	static void convert_add(unsigned char* yuv_pic,unsigned char* data,unsigned char* data2,__m256d y1,__m256d u1,__m256d v1,__m256d y2,__m256d u2,__m256d v2 ,int width,int height,int offset,int i, int k, int alpha)
 	{
@@ -105,11 +101,13 @@ struct AVX
 			 yuv_pic[i+width] = (unsigned char)result[2];
 			 yuv_pic[i+width+1] = (unsigned char)result[3];
 
-			 _mm256_storeu_pd (result,u1);
+			/* _mm256_storeu_pd (result,u1);
 			 yuv_pic[offset+k]=(unsigned char)result[0];
 
 			 _mm256_storeu_pd (result,v1);
-			 yuv_pic[offset+k+width*height/4]=(unsigned char)result[0];
+			 yuv_pic[offset+k+width*height/4]=(unsigned char)result[0];*/
+			  yuv_pic[offset+k] = (unsigned char)(((double*)&u1)[0]);
+			   yuv_pic[offset+k+width*height/4] = (unsigned char)(((double*)&v1)[0]);
 	}
 	static void YUV2ARGB2YUV(unsigned char* data,unsigned char *yuv_pic, int width, int height,int alpha)
 	{
@@ -144,31 +142,3 @@ struct AVX
 		}
 	}
 };
-/*int main(int argc, char* argv[])  
-{  
-	int char_num = (pic_width*pic_height*3)>>1;
-	clock_t start,end,start_tmp;
-	int time = 0;
-	        char* yuv_0 = new char[(1080*1920*3)>>1];//source image 1
-	        char* yuv_1 = new char[(1080*1920*3)>>1];//source image 2
-	        char* yuv_2 = new char[(1080*1920*3)>>1];//dest image
-	        ifstream fin;
-	        fin.open("dem2.yuv",ios::binary);
-	        fin.read(yuv_0, char_num);
-	        fin.close();
-	        ifstream fin1;
-	        fin1.open("dem1.yuv",ios::binary);
-	        fin1.read(yuv_1, char_num);
-	        fin1.close();
-	        ofstream fout;
-        	fout.open("trs1.yuv", ios::binary);
-        for(int A=1;A<256;A=A+3) {
-            start_tmp = clock();
-            	AVX::YUV2ARGB2YUV_add((unsigned char*)yuv_0,(unsigned char*)yuv_1,(unsigned char*)yuv_2,1920,1080,A);
-            end = clock();
-            time = (int)((end - start_tmp)/1000);
-            printf("time for loop %d is %d\n",(A-1)/3+1,time);
-            fout.write(yuv_2,char_num);
-        }
-	return 0;
-}  */
