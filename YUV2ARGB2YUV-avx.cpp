@@ -7,38 +7,6 @@
 using namespace std;
 const int pic_width = 1920;
 const int pic_height = 1080;
-//void convert2rgb(__m256d &r,__m256d &g,__m256d &b,__m256d y,__m256d u,__m256d v);
-//void convert2yuv(__m256d r,__m256d g,__m256d b,__m256d &y,__m256d &u,__m256d &v);
-//void YUV2ARGB2YUV(unsigned char* data, unsigned char *yuv_pic, int width, int height,int alpha);
-struct AVX;
-int main(int argc, char* argv[])  
-{  
-	int char_num = (pic_width*pic_height*3)>>1;
-	unsigned char* yuv_1 = new unsigned char[char_num];//source image
-        	unsigned char* yuv_2 = new unsigned char[char_num];//dest image
-	ifstream fin;
-	fin.open("dem1.yuv");
-	fin.read((char*)yuv_1, char_num);
-	fin.close();
-	clock_t start,end,start_tmp;
-	int time = 0;
-	ofstream fout;
-	fout.open("trsd.yuv");
-	
-	for(int A=1;A<256;A=A+3)
-        	{
-	            start_tmp = clock();
-	            YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
-	            end = clock();
-	            time = (int)((end - start_tmp)/1000);
-	            printf("time for loop %d is %d\n",(A-1)/3+1,time);
-	            fout.write((char*)yuv_2,char_num);
-        	}
-//fout.write((char*)yuv_2,char_num);
-	fout.close();
-	
-	return 0;
-}  
 struct AVX
 {
 	static void convert2rgb(__m256d &r,__m256d &g,__m256d &b,__m256d y,__m256d u,__m256d v)
@@ -91,12 +59,6 @@ struct AVX
 	{
 			__m256d r, g, b;
 			convert2rgb(r, g, b, y,u,v);
-
-			/*
-			R’=A*R/256
-			G’=A*G/256
-			b’=A*B/256
-			*/
 			r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
 			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
 			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
@@ -116,6 +78,39 @@ struct AVX
 			 _mm256_storeu_pd (result,v);
 			 yuv_pic[offset+k+width*height/4]=(unsigned char)result[0];
 	}
+	static void convert_add(unsigned char* yuv_pic,unsigned char* data,unsigned char* data2,__m256d y1,__m256d u1,__m256d v1,__m256d y2,__m256d u2,__m256d v2 ,int width,int height,int offset,int i, int k, int alpha)
+	{
+			__m256d r, g, b;
+			convert2rgb(r, g, b, y1,u1,v1);
+			r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
+			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
+			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
+
+			__m256d tr, tg, tb;
+			convert2rgb(tr, tg, tb, y2,u2,v2);
+			tr=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),_mm256_div_pd(tr,_mm256_set1_pd(256.0)));
+			tg=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),_mm256_div_pd(tg,_mm256_set1_pd(256.0)));
+			tb=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),_mm256_div_pd(tb,_mm256_set1_pd(256.0)));
+
+			r=_mm256_add_pd(r,tr);
+			g=_mm256_add_pd(g,tg);
+			b=_mm256_add_pd(b,tb);
+
+			convert2yuv(r,g,b,y1,u1,v1);
+
+			double result[4];
+			 _mm256_storeu_pd (result,y1);
+			 yuv_pic[i] = (unsigned char)result[0];
+			 yuv_pic[i+1] = (unsigned char)result[1];
+			 yuv_pic[i+width] = (unsigned char)result[2];
+			 yuv_pic[i+width+1] = (unsigned char)result[3];
+
+			 _mm256_storeu_pd (result,u1);
+			 yuv_pic[offset+k]=(unsigned char)result[0];
+
+			 _mm256_storeu_pd (result,v1);
+			 yuv_pic[offset+k+width*height/4]=(unsigned char)result[0];
+	}
 	static void YUV2ARGB2YUV(unsigned char* data,unsigned char *yuv_pic, int width, int height,int alpha)
 	{
 		int size = width*height;  
@@ -130,4 +125,50 @@ struct AVX
 			 	i+=width;  
 		}
 	}
-}
+	static void YUV2ARGB2YUV_add(unsigned char* data,unsigned char* data2,unsigned char *yuv_pic, int width, int height,int alpha)
+	{
+		int size = width*height;  
+		int offset = size;
+		for(int i=0, k=0; i < size; i+=2, k+=1) 
+		{
+			__m256d y1 = _mm256_set_pd((double)data[i],(double)data[i+1],(double)data[i+width],(double)data[i+width+1]);
+		   	__m256d u1 =_mm256_set1_pd((double)data[offset+k]);
+		   	__m256d v1 =_mm256_set1_pd((double)data[offset+size/4+k]);
+
+		   	__m256d y2 = _mm256_set_pd((double)data2[i],(double)data2[i+1],(double)data2[i+width],(double)data2[i+width+1]);
+		   	__m256d u2 =_mm256_set1_pd((double)data2[offset+k]);
+		   	__m256d v2 =_mm256_set1_pd((double)data2[offset+size/4+k]);
+			convert_add((unsigned char*)yuv_pic,(unsigned char*)data,(unsigned char*)data2, y1, u1, v1,y2,u2,v2, width,height, offset,i,k, alpha);
+			if (i!=0 && (i+4)%width==0)  
+			 	i+=width;  
+		}
+	}
+};
+/*int main(int argc, char* argv[])  
+{  
+	int char_num = (pic_width*pic_height*3)>>1;
+	clock_t start,end,start_tmp;
+	int time = 0;
+	        char* yuv_0 = new char[(1080*1920*3)>>1];//source image 1
+	        char* yuv_1 = new char[(1080*1920*3)>>1];//source image 2
+	        char* yuv_2 = new char[(1080*1920*3)>>1];//dest image
+	        ifstream fin;
+	        fin.open("dem2.yuv",ios::binary);
+	        fin.read(yuv_0, char_num);
+	        fin.close();
+	        ifstream fin1;
+	        fin1.open("dem1.yuv",ios::binary);
+	        fin1.read(yuv_1, char_num);
+	        fin1.close();
+	        ofstream fout;
+        	fout.open("trs1.yuv", ios::binary);
+        for(int A=1;A<256;A=A+3) {
+            start_tmp = clock();
+            	AVX::YUV2ARGB2YUV_add((unsigned char*)yuv_0,(unsigned char*)yuv_1,(unsigned char*)yuv_2,1920,1080,A);
+            end = clock();
+            time = (int)((end - start_tmp)/1000);
+            printf("time for loop %d is %d\n",(A-1)/3+1,time);
+            fout.write(yuv_2,char_num);
+        }
+	return 0;
+}  */
