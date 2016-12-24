@@ -13,25 +13,45 @@ void convert2rgb(__m256 &r,__m256 &g,__m256 &b,__m256 y,__m256 u,__m256 v);
 unsigned char* YUV2ARGB(unsigned char* yuv_file,int width,int height,int alpha);
 void convert2yuv(__m256 r,__m256 g,__m256 b,__m256 &y,__m256 &u,__m256 &v);
 unsigned char* ARGB2YUV(unsigned char* rgb_file,int width,int height);
+void YUV2ARGB2YUV(unsigned char* data, unsigned char *yuv_pic, int width, int height,int alpha);
 int main(int argc, char* argv[])  
 {  
+	int char_num = (pic_width*pic_height*3)>>1;
+	unsigned char* yuv_1 = new unsigned char[char_num];//source image
+        	unsigned char* yuv_2 = new unsigned char[char_num];//dest image
 	ifstream fin;
 	fin.open("dem1.yuv");
-	int char_num = (pic_height*pic_width*3)>>1;
-	unsigned char* yuv_file=new unsigned char[char_num];
-	fin.read((char*)yuv_file, char_num);
+	fin.read((char*)yuv_1, char_num);
 	fin.close();
-	unsigned char* rgb_file=YUV2ARGB((unsigned char*)yuv_file,pic_width,pic_height,0);
+	/*unsigned char* rgb_file=YUV2ARGB((unsigned char*)yuv_file,pic_width,pic_height,0);
 	delete [] yuv_file; 
-	yuv_file=ARGB2YUV((unsigned char*)rgb_file,pic_width,pic_height);
+	for(int i = 0;i<100;i++)
+		printf("%u ",(unsigned int)rgb_file[i]);
+	printf("\n");
+	yuv_file=ARGB2YUV((unsigned char*)rgb_file,pic_width,pic_height);*/
+	YUV2ARGB2YUV(yuv_1, yuv_2, pic_width, pic_height,0);
 	ofstream fout;
 	fout.open("trs1.yuv");
-	fout.write((char*)yuv_file,char_num);
+	fout.write((char*)yuv_2,char_num);
 	fout.close();
 	return 0;
 }  
 void convert2rgb(__m256 &r,__m256 &g,__m256 &b,__m256 y,__m256 u,__m256 v)
 {
+	/*float result[8];
+	_mm256_storeu_ps (result,y);
+	printf("y=\n");
+	for(int i = 0;i<8;i++)
+		printf("%d ",(int)result[i]);
+	_mm256_storeu_ps (result,u);
+	printf("u=\n");
+	for(int i = 0;i<8;i++)
+		printf("%d ",(int)result[i]);
+	_mm256_storeu_ps (result,v);
+	printf("v=\n");
+	for(int i = 0;i<8;i++)
+		printf("%d ",(int)result[i]);*/
+
 	y = _mm256_sub_ps(y,vec_16);
 	v =_mm256_sub_ps(v,vec_128);
 	u =_mm256_sub_ps(u,vec_128);
@@ -43,81 +63,32 @@ void convert2rgb(__m256 &r,__m256 &g,__m256 &b,__m256 y,__m256 u,__m256 v)
 	g = _mm256_sub_ps(_mm256_mul_ps(y,vec_1_164),_mm256_mul_ps(u,vec_tmp));
 	vec_tmp = _mm256_set1_ps(0.812968);
 	g = _mm256_sub_ps(g, _mm256_mul_ps(v,vec_tmp));
-	//round to nearest
-	//r =_mm256_round_ps (r, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-	//g =_mm256_round_ps (g, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-	//b =_mm256_round_ps (b, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-	return;
-}
-unsigned char* YUV2ARGB(unsigned char* yuv_file,int width,int height,int alpha)
-{
-	unsigned char* rgb_file = new unsigned char[width*height*4];
-	__m256  y,u,v;
-        	int tmp = 0;
-        	unsigned char* ystart;
-	for(int i = 0 ;i<height;i+=2)
-	for(int j = 0;j<width;j+=4)
-	{
-		ystart=yuv_file+i*width+j;
-		//Y1 Y2 Y7 Y8 Y3 Y4 Y9 Y10
-		y = _mm256_set_ps ((float)ystart[0],(float)(ystart[1]),(float)(ystart[width]), (float)(ystart[1+width]), (float)(ystart[2]), (float)(ystart[2+width]), (float)(ystart[3]), (float)(ystart[3+width]));
-		float u1=(float)(*(yuv_file+width*height+tmp));
-		float u2=(float)(*(yuv_file+width*height+tmp +1));
-		float v1=(float)(*(yuv_file+width*height+(width*height/4)+tmp));
-		float v2=(float)(*(yuv_file+width*height+(width*height/4)+tmp+1));
-		u = _mm256_set_ps (u1,u1,u1,u1,u2,u2,u2,u2);
-		v = _mm256_set_ps (v1,v1,v1,v1,v2,v2,v2,v2);
-		__m256  r,g,b;
-        		convert2rgb(r,g,b,y,u,v);
 
-        		rgb_file[tmp*4] =rgb_file[(tmp+1)*4] =rgb_file[(tmp+width)*4] =rgb_file[(tmp+width+1)*4] =rgb_file[(tmp+2)*4] =rgb_file[(tmp+2+width)*4] =rgb_file[(tmp+3)*4] =rgb_file[(tmp+3+width)*4] = (unsigned char)alpha;
-        		//check overflow and fill to rgb file
-		 float result[8];
-		 _mm256_storeu_ps (result,r);
-	      	for(int k =0;k<8;k++)
-	      	{
-	      		if(result[k]>255)result[k]=255;
-	      		else if(result[k]<0)result[k]=0;
-	      	}
-	      	rgb_file[tmp*4+1]=result[0];
-	      	rgb_file[(tmp+1)*4+1]=result[1];
-	      	rgb_file[(tmp+width)*4+1]=result[2];
-	      	rgb_file[(tmp+width+1)*4+1]=result[3];
-	      	rgb_file[(tmp+2)*4+1]=result[4];
-	      	rgb_file[(tmp+2+width)*4+1]=result[5];
-	      	rgb_file[(tmp+3)*4+1]=result[6];
-	      	rgb_file[(tmp+3+width)*4+1]=result[7];
-	      	_mm256_storeu_ps (result,g);
-	      	for(int k =0;k<8;k++)
-	      	{
-	      		if(result[k]>255)result[k]=255;
-	      		else if(result[k]<0)result[k]=0;
-	      	}
-	      	rgb_file[tmp*4+2]=result[0];
-	      	rgb_file[(tmp+width)*4+2]=result[1];
-	      	rgb_file[(tmp+1)*4+2]=result[2];
-	      	rgb_file[(tmp+1+width)*4+2]=result[3];
-	      	rgb_file[(tmp+2)*4+2]=result[4];
-	      	rgb_file[(tmp+2+width)*4+2]=result[5];
-	      	rgb_file[(tmp+3)*4+2]=result[6];
-	      	rgb_file[(tmp+3+width)*4+2]=result[7];
-	      	_mm256_storeu_ps (result,b);
-	      	for(int k =0;k<8;k++)
-	      	{
-	      		if(result[k]>255)result[k]=255;
-	      		else if(result[k]<0)result[k]=0;
-	      	}
-	      	rgb_file[tmp*4+3]=result[0];
-	      	rgb_file[(tmp+width)*4+3]=result[1];
-	      	rgb_file[(tmp+1)*4+3]=result[2];
-	      	rgb_file[(tmp+1+width)*4+3]=result[3];
-	      	rgb_file[(tmp+2)*4+3]=result[4];
-	      	rgb_file[(tmp+2+width)*4+3]=result[5];
-	      	rgb_file[(tmp+3)*4+3]=result[6];
-	      	rgb_file[(tmp+3+width)*4+3]=result[7];
-		tmp+=2;
-	}
-	return rgb_file;
+	r=_mm256_max_ps(r,_mm256_set1_ps(0));
+	g=_mm256_max_ps(g,_mm256_set1_ps(0));
+	b=_mm256_max_ps(b,_mm256_set1_ps(0));
+	r=_mm256_min_ps(r,_mm256_set1_ps(255));
+	g=_mm256_min_ps(g,_mm256_set1_ps(255));
+	b=_mm256_min_ps(b,_mm256_set1_ps(255));
+	//round down(cut off float part)
+	r =_mm256_round_ps (r, (_MM_FROUND_TO_NEG_INF |_MM_FROUND_NO_EXC) );
+	g =_mm256_round_ps (g, (_MM_FROUND_TO_NEG_INF |_MM_FROUND_NO_EXC) );
+	b =_mm256_round_ps (b, (_MM_FROUND_TO_NEG_INF |_MM_FROUND_NO_EXC) );
+
+	/*_mm256_storeu_ps (result,r);
+	printf("r=\n");
+	for(int i = 0;i<8;i++)
+		printf("%d ",(int)result[i]);
+	_mm256_storeu_ps (result,g);
+	printf("g=\n");
+	for(int i = 0;i<8;i++)
+		printf("%d ",(int)result[i]);
+	_mm256_storeu_ps (result,b);
+	printf("b=\n");
+	for(int i = 0;i<8;i++)
+		printf("%d ",(int)result[i]);
+	getchar();*/
+	return;
 }
 void convert2yuv(__m256 r,__m256 g,__m256 b,__m256 &y,__m256 &u,__m256 &v)
 {
@@ -140,44 +111,44 @@ void convert2yuv(__m256 r,__m256 g,__m256 b,__m256 &y,__m256 &u,__m256 &v)
 	v=_mm256_sub_ps(v,_mm256_mul_ps(b,_mm256_set1_ps(0.071427)));
 	v=_mm256_add_ps(v,_mm256_set1_ps(128.0));
 }
-unsigned char* ARGB2YUV(unsigned char* rgb_file,int width,int height)
+
+void convert(unsigned char *yuv_pic,__m256 y,__m256 u,__m256 v, int width,int height,int offset,int i, int k, int alpha)
 {
-	unsigned char* yuv_file = new unsigned char[width*height*3];
-        	__m256  r,g,b;
-        	int tmp = 0;
-        	unsigned char* ystart;
-        	unsigned char* ustart = yuv_file+pic_height*pic_width;
-	for(int i = 0 ;i<pic_height;i+=2)
-	for(int j = 0;j<pic_width;j+=4)
-	{
-		ystart = yuv_file+i*width+j;
-		r = _mm256_set_ps((float)rgb_file[tmp*4+1],(float)rgb_file[(tmp+1)*4+1],(float)rgb_file[(tmp+width)*4+1],(float)rgb_file[(tmp+width+1)*4+1],(float)rgb_file[(tmp+2)*4+1],(float)rgb_file[(tmp+2+width)*4+1],(float)rgb_file[(tmp+3)*4+1],(float)rgb_file[(tmp+3+width)*4+1]);
-		g = _mm256_set_ps((float)rgb_file[tmp*4+2],(float)rgb_file[(tmp+1)*4+2],(float)rgb_file[(tmp+width)*4+2],(float)rgb_file[(tmp+width+1)*4+2],(float)rgb_file[(tmp+2)*4+2],(float)rgb_file[(tmp+2+width)*4+2],(float)rgb_file[(tmp+3)*4+2],(float)rgb_file[(tmp+3+width)*4+2]);
-		b = _mm256_set_ps((float)rgb_file[tmp*4+3],(float)rgb_file[(tmp+1)*4+3],(float)rgb_file[(tmp+width)*4+3],(float)rgb_file[(tmp+width+1)*4+3],(float)rgb_file[(tmp+2)*4+3],(float)rgb_file[(tmp+2+width)*4+3],(float)rgb_file[(tmp+3)*4+3],(float)rgb_file[(tmp+3+width)*4+3]);
-        		__m256  y,u,v;  
-        		convert2yuv(r,g,b,y,u,v);
-        		//store the res
-        		float result[8];
+		__m256 r, g, b;
+		convert2rgb(r, g, b, y,u,v);
+		convert2yuv(r,g,b,y,u,v);
+
+		float result[8];
 		 _mm256_storeu_ps (result,y);
-		 ystart[0]=(unsigned char)result[0];
-		 ystart[1]=(unsigned char)result[1];
-		 ystart[width]=(unsigned char)result[2];
-		 ystart[1+width]=(unsigned char)result[3];
-		 ystart[2]=(unsigned char)result[4];
-		 ystart[3]=(unsigned char)result[5];
-		 ystart[2+width]=(unsigned char)result[6];
-		 ystart[3+width]=(unsigned char)result[7];
+		 yuv_pic[i] = result[0];
+		 yuv_pic[i+1] = result[1];
+		 yuv_pic[i+width] = result[2];
+		 yuv_pic[i+width+1] = result[3];
+		 yuv_pic[i+2] = result[4];
+		 yuv_pic[i+3] = result[5];
+		 yuv_pic[i+2+width] = result[6];
+		 yuv_pic[i+3+width] = result[7];
 
 		 _mm256_storeu_ps (result,u);
-		 ustart[0]=(unsigned char)result[0];
-		 ustart[1]=(unsigned char)result[4];
+		 yuv_pic[offset+k]=result[0];
+		 yuv_pic[offset+k+1]=result[4];
 
-		 unsigned char* vstart = ustart+(width*height)/4;
 		 _mm256_storeu_ps (result,v);
-		 vstart[0]=(unsigned char)result[0];
-		 vstart[1]=(unsigned char)result[4];
-		tmp+=2;
-		ustart+=2;
+		 yuv_pic[offset+k+width*height/4]=result[0];
+		 yuv_pic[offset+k+width*height/4+1]=result[4];
+}
+void YUV2ARGB2YUV(unsigned char* data,unsigned char *yuv_pic, int width, int height,int alpha)
+{
+	int size = width*height;  
+	int offset = size;
+	unsigned char u, v, y1, y2, y3, y4;
+	for(int i=0, k=0; i < size; i+=4, k+=2) 
+	{
+		__m256 y = _mm256_set_ps((float)data[i],(float)data[i+1],(float)data[i+width],(float)data[i+width+1],(float)data[i+2],(float)data[i+3],(float)data[i+2+width],(float)data[i+3+width]);
+	   	__m256 u =_mm256_set_ps((float)data[offset+k],(float)data[offset+k],(float)data[offset+k],(float)data[offset+k],(float)data[offset+k+1],(float)data[offset+k+1],(float)data[offset+k+1],(float)data[offset+k+1]);
+	   	__m256 v =_mm256_set_ps((float)data[offset+size/4+k],(float)data[offset+size/4+k],(float)data[offset+size/4+k],(float)data[offset+size/4+k],(float)data[offset+size/4+k+1],(float)data[offset+size/4+k+1],(float)data[offset+size/4+k+1],(float)data[offset+size/4+k+1]);
+		convert(yuv_pic, y, u, v, width,height, offset,i,k, alpha);
+		if (i!=0 && (i+4)%width==0)  
+		 	i+=width;  
 	}
-	return yuv_file;
 }
