@@ -52,9 +52,12 @@ struct AVX
 	{
 			__m256d r, g, b;
 			convert2rgb(r, g, b, y,u,v);
-			r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
-			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
-			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
+			//r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
+			//g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
+			//b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
+			r=_mm256_mul_pd(_mm256_set1_pd((double)alpha/256.0),r);
+			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha/256.0),g);
+			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha/256.0),b);
 
 			convert2yuv(r,g,b,y,u,v);
 
@@ -78,19 +81,36 @@ struct AVX
 	{
 			__m256d r, g, b;
 			convert2rgb(r, g, b, y1,u1,v1);
-			r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
-			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
-			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
+			/*r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),r);
+			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),g);
+			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),b);*/
 
 			__m256d tr, tg, tb;
 			convert2rgb(tr, tg, tb, y2,u2,v2);
-			tr=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),_mm256_div_pd(tr,_mm256_set1_pd(256.0)));
-			tg=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),_mm256_div_pd(tg,_mm256_set1_pd(256.0)));
-			tb=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),_mm256_div_pd(tb,_mm256_set1_pd(256.0)));
+
+			r=_mm256_sub_pd(r,tr);
+			g=_mm256_sub_pd(g,tg);
+			b=_mm256_sub_pd(b,tb);
+
+			r=_mm256_mul_pd(r,_mm256_set1_pd(((double)alpha/256.0)));
+			g=_mm256_mul_pd(g,_mm256_set1_pd(((double)alpha)/256.0));
+			b=_mm256_mul_pd(b,_mm256_set1_pd(((double)alpha)/256.0));
 
 			r=_mm256_add_pd(r,tr);
 			g=_mm256_add_pd(g,tg);
 			b=_mm256_add_pd(b,tb);
+			/*
+			tr=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),tr);
+			tg=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),tg);
+			tb=_mm256_mul_pd(_mm256_set1_pd((double)(256.0-alpha)),tb);
+
+			r=_mm256_add_pd(r,tr);
+			g=_mm256_add_pd(g,tg);
+			b=_mm256_add_pd(b,tb);
+
+			r=_mm256_div_pd(r,_mm256_set1_pd(256.0));
+			g=_mm256_div_pd(g,_mm256_set1_pd(256.0));
+			b=_mm256_div_pd(b,_mm256_set1_pd(256.0));*/
 
 			convert2yuv(r,g,b,y1,u1,v1);
 
