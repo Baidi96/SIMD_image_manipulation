@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdio>
 #include <fstream>
+#include <ctime>
 using namespace std;
 const int pic_width = 1920;
 const int pic_height = 1080;
@@ -18,11 +19,24 @@ int main(int argc, char* argv[])
 	fin.open("dem1.yuv");
 	fin.read((char*)yuv_1, char_num);
 	fin.close();
-	YUV2ARGB2YUV(yuv_1, yuv_2, pic_width, pic_height,0);
+	clock_t start,end,start_tmp;
+	int time = 0;
 	ofstream fout;
 	fout.open("trsd.yuv");
-	fout.write((char*)yuv_2,char_num);
+	
+	for(int A=1;A<256;A=A+3)
+        	{
+	            start_tmp = clock();
+	            YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
+	            end = clock();
+	            time = (int)((end - start_tmp)/1000);
+	            printf("time for loop %d is %d\n",(A-1)/3+1,time);
+	            fout.write((char*)yuv_2,char_num);
+        	}
+//fout.write((char*)yuv_2,char_num);
 	fout.close();
+	YUV2ARGB2YUV(yuv_1, yuv_2, pic_width, pic_height,0);
+	
 	return 0;
 }  
 void convert2rgb(__m256d &r,__m256d &g,__m256d &b,__m256d y,__m256d u,__m256d v)
@@ -75,6 +89,16 @@ void convert(unsigned char *yuv_pic,__m256d y,__m256d u,__m256d v, int width,int
 {
 		__m256d r, g, b;
 		convert2rgb(r, g, b, y,u,v);
+
+		/*
+		R’=A*R/256
+		G’=A*G/256
+		b’=A*B/256
+		*/
+		r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
+		g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
+		b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
+
 		convert2yuv(r,g,b,y,u,v);
 
 		double result[4];
