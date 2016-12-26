@@ -23,7 +23,7 @@ int main()
     int time0 = process(0);
     printf("----time for total process_without_simd:%d \n", time0);
     int time2 = process(2);
-    printf("----time for total process_with_sse:%d \n", time2);
+    printf("----time for total process_with_sse2:%d \n", time2);
     int time3 = process(3);
     printf("----time for total process_with_avx:%d \n", time3);
     return 0;

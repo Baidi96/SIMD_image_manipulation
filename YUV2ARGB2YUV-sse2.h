@@ -59,9 +59,10 @@ struct SSE2
 		ARG_TYPE_SSE2 r, g, b;
 		yuv2rgb(y, u, v, r, g, b);
 		
-		r = _mm_div_pd(_mm_mul_pd(r, _mm_set1_pd((double)alpha)), _mm_set1_pd(256.0));
-		g = _mm_div_pd(_mm_mul_pd(g, _mm_set1_pd((double)alpha)), _mm_set1_pd(256.0));
-		b = _mm_div_pd(_mm_mul_pd(b, _mm_set1_pd((double)alpha)), _mm_set1_pd(256.0));
+		double fac = alpha / 256.0;
+		r = _mm_mul_pd(r, _mm_set1_pd(fac));
+		g = _mm_mul_pd(g, _mm_set1_pd(fac));
+		b = _mm_mul_pd(b, _mm_set1_pd(fac));
 
 		ARG_TYPE_SSE2 y2, u2, v2;
 		rgb2yuv(r, g, b, y2, u2, v2);
@@ -85,15 +86,17 @@ struct SSE2
 		g=(alpha*g + (256-alpha)*g_)/256;
 		b=(alpha*b + (256-alpha)*b_)/256;
 		*/
-		ARG_TYPE_SSE2 r0 = _mm_mul_pd(_mm_set1_pd((double)alpha), r);
-		ARG_TYPE_SSE2 r1 = _mm_mul_pd(_mm_set1_pd(256 - (double)alpha), r_);
-		r = _mm_div_pd(_mm_add_pd(r0, r1), _mm_set1_pd(256.0));
-		ARG_TYPE_SSE2 g0 = _mm_mul_pd(_mm_set1_pd((double)alpha), g);
-		ARG_TYPE_SSE2 g1 = _mm_mul_pd(_mm_set1_pd(256 - (double)alpha), g_);
-		g = _mm_div_pd(_mm_add_pd(g0, g1), _mm_set1_pd(256.0));
-		ARG_TYPE_SSE2 b0 = _mm_mul_pd(_mm_set1_pd((double)alpha), b);
-		ARG_TYPE_SSE2 b1 = _mm_mul_pd(_mm_set1_pd(256 - (double)alpha), b_);
-		b = _mm_div_pd(_mm_add_pd(b0, b1), _mm_set1_pd(256.0));
+		
+		double fac1 = alpha / 256.0, fac2 = (256 - alpha) / 256.0;
+		ARG_TYPE_SSE2 r0 = _mm_mul_pd(_mm_set1_pd(fac1), r);
+		ARG_TYPE_SSE2 r1 = _mm_mul_pd(_mm_set1_pd(fac2), r_);
+		r = _mm_add_pd(r0, r1);
+		ARG_TYPE_SSE2 g0 = _mm_mul_pd(_mm_set1_pd(fac1), g);
+		ARG_TYPE_SSE2 g1 = _mm_mul_pd(_mm_set1_pd(fac2), g_);
+		g = _mm_add_pd(g0, g1);
+		ARG_TYPE_SSE2 b0 = _mm_mul_pd(_mm_set1_pd(fac1), b);
+		ARG_TYPE_SSE2 b1 = _mm_mul_pd(_mm_set1_pd(fac2), b_);
+		b = _mm_add_pd(b0, b1);
 		
 		ARG_TYPE_SSE2 y2, u2, v2;
 		rgb2yuv(r, g, b, y2, u2, v2);
