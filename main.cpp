@@ -3,6 +3,7 @@
 #include "YUV2ARGB2YUV.h"
 #include "YUV2ARGB2YUV-sse2.h"
 #include "YUV2ARGB2YUV-avx.h"
+#include "YUV2ARGB2YUV-mmx.h"
 #include <cstdlib>
 // #include <cmath>
 #include <cstdio>
@@ -22,6 +23,8 @@ int main()
 {
     int time0 = process(0);
     printf("----time for total process_without_simd:%d \n", time0);
+    int time1 = process(1);
+    printf("----time for total process_with_mmx:%d \n", time1);
     int time2 = process(2);
     printf("----time for total process_with_sse2:%d \n", time2);
     int time3 = process(3);
@@ -59,6 +62,8 @@ int process(int isa)
             start_tmp = clock();
             if(isa == 0)
             	NO_SIMD::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
+            else if(isa == 1)
+                MMX::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
             else if(isa == 2)
             	SSE2::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
             else if(isa == 3)
@@ -96,6 +101,8 @@ int process(int isa)
             start_tmp = clock();
             if(isa == 0)
             	NO_SIMD::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
+            else if(isa == 1)
+                MMX::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
             else if(isa == 2)
             	SSE2::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
             else if(isa == 3)
