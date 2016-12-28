@@ -1,12 +1,29 @@
 #include "immintrin.h"
-
+ __m256d zero = _mm256_set1_pd(0.0);
+ __m256d twofivefive = _mm256_set1_pd(255.0);
+ __m256d vec_16 = _mm256_set1_pd(16.0);
+ __m256d vec_128 = _mm256_set1_pd(128.0);
+ __m256d vec_1_164 = _mm256_set1_pd(1.164383);
 struct AVX
 {
+	/*static __m256d zero;
+	static __m256d twofivefive;
+	static __m256d vec_128;
+	static __m256d vec_16;
+	static __m256d vec_1_164;
+	AVX()
+	{
+		zero = _mm256_set1_pd(0.0);
+		 twofivefive = _mm256_set1_pd(255.0);
+		 vec_16 = _mm256_set1_pd(16.0);
+		vec_128 = _mm256_set1_pd(128.0);
+		vec_1_164 = _mm256_set1_pd(1.164383);
+	}*/
 	static void convert2rgb(__m256d &r,__m256d &g,__m256d &b,__m256d y,__m256d u,__m256d v)
 	{
-		__m256d vec_16 = _mm256_set1_pd(16.0);
+		/*__m256d vec_16 = _mm256_set1_pd(16.0);
 		__m256d vec_128 = _mm256_set1_pd(128.0);
-		__m256d vec_1_164 = _mm256_set1_pd(1.164383);
+		__m256d vec_1_164 = _mm256_set1_pd(1.164383);*/
 
 		y = _mm256_sub_pd(y,vec_16);
 		v =_mm256_sub_pd(v,vec_128);
@@ -17,12 +34,13 @@ struct AVX
 		g = _mm256_sub_pd(_mm256_mul_pd(y,vec_1_164),_mm256_mul_pd(u,_mm256_set1_pd(0.391762)));
 		g = _mm256_sub_pd(g, _mm256_mul_pd(v,_mm256_set1_pd(0.812968)));
 
-		r=_mm256_max_pd(r,_mm256_set1_pd(0.0));
-		g=_mm256_max_pd(g,_mm256_set1_pd(0.0));
-		b=_mm256_max_pd(b,_mm256_set1_pd(0.0));
-		r=_mm256_min_pd(r,_mm256_set1_pd(255.0));
-		g=_mm256_min_pd(g,_mm256_set1_pd(255.0));
-		b=_mm256_min_pd(b,_mm256_set1_pd(255.0));
+		
+		r=_mm256_max_pd(r,zero);
+		g=_mm256_max_pd(g,zero);
+		b=_mm256_max_pd(b,zero);
+		r=_mm256_min_pd(r,twofivefive);
+		g=_mm256_min_pd(g,twofivefive);
+		b=_mm256_min_pd(b,twofivefive);
 
 		return;
 	}
@@ -55,9 +73,10 @@ struct AVX
 			//r=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(r,_mm256_set1_pd(256.0)));
 			//g=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(g,_mm256_set1_pd(256.0)));
 			//b=_mm256_mul_pd(_mm256_set1_pd((double)alpha),_mm256_div_pd(b,_mm256_set1_pd(256.0)));
-			r=_mm256_mul_pd(_mm256_set1_pd((double)alpha/256.0),r);
-			g=_mm256_mul_pd(_mm256_set1_pd((double)alpha/256.0),g);
-			b=_mm256_mul_pd(_mm256_set1_pd((double)alpha/256.0),b);
+			__m256d tmp = _mm256_set1_pd((double)alpha/256.0);
+			r=_mm256_mul_pd(tmp,r);
+			g=_mm256_mul_pd(tmp,g);
+			b=_mm256_mul_pd(tmp,b);
 
 			convert2yuv(r,g,b,y,u,v);
 
@@ -92,9 +111,10 @@ struct AVX
 			g=_mm256_sub_pd(g,tg);
 			b=_mm256_sub_pd(b,tb);
 
-			r=_mm256_mul_pd(r,_mm256_set1_pd(((double)alpha/256.0)));
-			g=_mm256_mul_pd(g,_mm256_set1_pd(((double)alpha)/256.0));
-			b=_mm256_mul_pd(b,_mm256_set1_pd(((double)alpha)/256.0));
+			__m256d tmp = _mm256_set1_pd((double)alpha/256.0);
+			r=_mm256_mul_pd(r,tmp);
+			g=_mm256_mul_pd(g,tmp);
+			b=_mm256_mul_pd(b,tmp);
 
 			r=_mm256_add_pd(r,tr);
 			g=_mm256_add_pd(g,tg);
@@ -133,6 +153,7 @@ struct AVX
 	{
 		int size = width*height;  
 		int offset = size;
+		//double t_alpha = (double)alpha/256.0;
 		for(int i=0, k=0; i < size; i+=2, k+=1) 
 		{
 			__m256d y = _mm256_set_pd((double)data[i],(double)data[i+1],(double)data[i+width],(double)data[i+width+1]);
@@ -147,6 +168,7 @@ struct AVX
 	{
 		int size = width*height;  
 		int offset = size;
+		//double t_alpha = (double)alpha/256.0;
 		for(int i=0, k=0; i < size; i+=2, k+=1) 
 		{
 			__m256d y1 = _mm256_set_pd((double)data[i],(double)data[i+1],(double)data[i+width],(double)data[i+width+1]);
