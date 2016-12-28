@@ -1,15 +1,15 @@
 #include <mmintrin.h>
 #include <stdio.h>
-
+//static int n1 = 0;
 #define ARG_TYPE_MMX __m64
 #define _MM_mul(x,y) _mm_add_pi32(_mm_mullo_pi16(x,y),_mm_mulhi_pi16(x,y))
 
-static const short yuv2b[3] = { 0.164383 * (1 << 16),  0.017232 * (1 << 16),0 * (1 << 16) };
+static const short yuv2r[3] = { 0.164383 * (1 << 16),  0.017232 * (1 << 16),0 * (1 << 16) };
 static const short yuv2g[3] = { 0.164383 * (1 << 16), -0.391762 * (1 << 16), -0.312968 * (1 << 16) };
-static const short yuv2r[3] = { 0.164383 * (1 << 16),0 * (1 << 16),  0.096027 * (1 << 16) };
+static const short yuv2b[3] = { 0.164383 * (1 << 16),0 * (1 << 16),  0.096027 * (1 << 16) };
 static const short rgb2y[3] = { short(0.256788 * (1 << 16)),  short(0.004129 * (1 << 16)),  short(0.097906 * (1 << 16)) };
-static const short rgb2v[3] = { short(0.439216 * (1 << 16)),  short(-0.367788 * (1 << 16)), short(-0.071427 * (1 << 16)) };
-static const short rgb2u[3] = { short(-0.148223 * (1 << 16)), short(-0.290993 * (1 << 16)), short(0.439216 * (1 << 16)) };
+static const short rgb2u[3] = { short(0.439216 * (1 << 16)),  short(-0.367788 * (1 << 16)), short(-0.071427 * (1 << 16)) };
+static const short rgb2v[3] = { short(-0.148223 * (1 << 16)), short(-0.290993 * (1 << 16)), short(0.439216 * (1 << 16)) };
 static const ARG_TYPE_MMX off128 = _mm_set_pi16(128, 128, 128, 128);
 static const ARG_TYPE_MMX off16 = _mm_set_pi16(16, 16, 16, 16);
 const ARG_TYPE_MMX Y_R = _mm_set_pi16(yuv2r[0], yuv2r[0], yuv2r[0], yuv2r[0]);
@@ -78,7 +78,28 @@ struct MMX
 		g = g>255 ? 255 : g<0 ? 0 : g;
 		b = b>255 ? 255 : b<0 ? 0 : b;
 		*/
-        // comparision not found
+        //boundary check
+        ARG_TYPE_MMX tmp4 = _mm_set_pi16(255, 255, 255, 255);
+        ARG_TYPE_MMX tmp5 = _mm_set_pi16(0, 0, 0, 0);
+        ARG_TYPE_MMX res_up = _mm_cmpgt_pi16(r,tmp4);
+        ARG_TYPE_MMX res_down = _mm_cmpgt_pi16(tmp5,r);
+        if(res_up[0])
+             r = tmp4;
+        else if (res_down[0])
+             r = tmp5;
+        res_up = _mm_cmpgt_pi16(g,tmp4);
+        res_down = _mm_cmpgt_pi16(tmp5,g);
+        if(res_up[0])
+             g = tmp4;
+        else if (res_down[0])
+             g =tmp5;
+        res_up = _mm_cmpgt_pi16(b,tmp4);
+        res_down = _mm_cmpgt_pi16(tmp5,b);
+        if(res_up[0])
+             b = tmp4;
+        else if (res_down[0])
+             b = tmp5;
+
 	}
 
 	static void rgb2yuv(ARG_TYPE_MMX r, ARG_TYPE_MMX g, ARG_TYPE_MMX b, ARG_TYPE_MMX &y, ARG_TYPE_MMX &u, ARG_TYPE_MMX &v)
@@ -140,6 +161,27 @@ struct MMX
 		//r = _MM_mul(r, _mm_set1_pi32(fac));
 		//g = _MM_mul(g, _mm_set1_pi32(fac));
 		//b = _MM_mul(b, _mm_set1_pi32(fac));
+        //boundary check
+        ARG_TYPE_MMX tmp4 = _mm_set_pi16(255, 255, 255, 255);
+        ARG_TYPE_MMX tmp5 = _mm_set_pi16(0, 0, 0, 0);
+        ARG_TYPE_MMX res_up = _mm_cmpgt_pi16(r,tmp4);
+        ARG_TYPE_MMX res_down = _mm_cmpgt_pi16(tmp5,r);
+        if(res_up[0])
+             r = tmp4;
+        else if (res_down[0])
+             r = tmp5;
+        res_up = _mm_cmpgt_pi16(g,tmp4);
+        res_down = _mm_cmpgt_pi16(tmp5,g);
+        if(res_up[0])
+             g = tmp4;
+        else if (res_down[0])
+             g =tmp5;
+        res_up = _mm_cmpgt_pi16(b,tmp4);
+        res_down = _mm_cmpgt_pi16(tmp5,b);
+        if(res_up[0])
+             b = tmp4;
+        else if (res_down[0])
+             b = tmp5;
 
 		ARG_TYPE_MMX y2, u2, v2;
 		rgb2yuv(r, g, b, y2, u2, v2);
