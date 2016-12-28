@@ -102,7 +102,7 @@ int process(int isa)
             if(isa == 0)
             	NO_SIMD::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
             else if(isa == 1)
-                MMX::YUV2ARGB2YUV(yuv_1,yuv_2,1920,1080,A);
+                MMX::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
             else if(isa == 2)
             	SSE2::YUV2ARGB2YUV_add(yuv_0,yuv_1,yuv_2,1920,1080,A);
             else if(isa == 3)
